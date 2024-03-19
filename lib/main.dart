@@ -1,9 +1,14 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+late SharedPreferences prefs;
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  prefs = await SharedPreferences.getInstance();
+
   runApp(
     MultiProvider(
       providers: [
@@ -19,9 +24,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool? likePage = prefs.getBool('likePage') ?? false;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HomePage(),
+      home: likePage ? HomePage() : LikePage(),
     );
   }
 }
@@ -63,6 +69,54 @@ class CatService extends ChangeNotifier {
   }
 }
 
+class LikePage extends StatefulWidget {
+  const LikePage({super.key});
+
+  @override
+  State<LikePage> createState() => _LikePageState();
+}
+
+class _LikePageState extends State<LikePage> {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<CatService>(
+      builder: (context, catService, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              "좋아요한 사진 리스트",
+              style: TextStyle(color: Colors.black),
+            ),
+            backgroundColor: Colors.blue,
+          ),
+          body: GridView.count(
+            crossAxisCount: 2,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            padding: EdgeInsets.all(8),
+            children: List.generate(
+              catService.favoriteCatImages.length,
+              (index) {
+                String catImage = catService.favoriteCatImages[index];
+                return GestureDetector(
+                    child: Stack(
+                  children: [
+                    Positioned.fill(
+                        child: Image.network(
+                      catImage,
+                      fit: BoxFit.cover,
+                    ))
+                  ],
+                ));
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
@@ -81,6 +135,8 @@ class HomePage extends StatelessWidget {
               IconButton(
                   onPressed: () {
                     // 아이콘 버튼 눌렀을 때 동작
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => LikePage()));
                   },
                   icon: Icon(
                     Icons.favorite,
